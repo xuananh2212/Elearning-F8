@@ -1,9 +1,64 @@
+require('dotenv').config();
 const { object, string, number, date, InferType } = require('yup');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const { User } = require('../../models/index');
+const jwt = require('jsonwebtoken');
+const UserTransformer = require('../../transformers/user.transformers');
 module.exports = {
-     handleLogin: (req, res) => {
+     handleLogin: async (req, res) => {
+          const response = {};
+          try {
+               let userSchema = object({
+                    email: string()
+                         .required("vui lòng nhập email")
+                         .email("email không đúng định dạng!"),
+                    password: string()
+                         .required("vui lòng nhập password")
+                         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,30}$/, "mật khẩu ít nhất 8 kí tự ,có kí tự viết hoa, ký tự đặc biệt và số")
+               });
+               const body = await userSchema.validate(req.body, { abortEarly: false });
+               const user = await User.findOne(
+                    {
+                         where: {
+                              email: body.email
+                         }
+                    });
+               if (!user) {
+                    Object.assign(response, {
+                         status: 400,
+                         message: "tài khoản và mật khẩu không chính xác",
+                    });
+               } else {
+                    const result = bcrypt.compare(body.password, user.password);
+                    if (result) {
+                         var access_token = jwt.sign({ id: user.id }, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+                         var refresh_token = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN, { expiresIn: '7d' });
+                         const data = new UserTransformer(user);
+                         Object.assign(response, {
+                              status: 200,
+                              message: 'success',
+                              user: data,
+                              access_token,
+                              refresh_token
+                         });
+                    } else {
+                         console.log(2);
+                         Object.assign(response, {
+                              status: 400,
+                              message: "tài khoản và mật khẩu không chính xác",
+                         });
+                    }
+               }
+          } catch (e) {
+               console.log(e);
+               //  const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
+               Object.assign(response, {
+                    status: 400,
+                    //      ...errors
+               });
+          }
+          return res.status(response.status).json(response)
 
      },
      handleRegister: async (req, res) => {
@@ -17,13 +72,12 @@ module.exports = {
                          .email("email không đúng định dạng!")
                          .test('unique', 'email đã tồn tại', async (email) => {
                               const user = await User.findOne({ where: { email } });
-                              console.log(user, 111);
                               return !user;
 
                          }),
                     password: string()
                          .required("vui lòng nhập password")
-                         .matches(/.{8,}$/, "mật khẩu ít nhất 8 kí tự")
+                         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,30}$/, "mật khẩu ít nhất 8 kí tự, có kí tự viết hoa, ký tự đặc biệt và số")
                          .test('matchPassword', "mật khẩu không hợp nhau", (password) => {
                               const { passwordRe } = req.body
                               return password === passwordRe
