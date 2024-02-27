@@ -2,7 +2,7 @@ require('dotenv').config();
 const { object, string, number, date, InferType } = require('yup');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
-const { User } = require('../../models/index');
+const { User, Blacklist } = require('../../models/index');
 const jwt = require('jsonwebtoken');
 const UserTransformer = require('../../transformers/user.transformers');
 module.exports = {
@@ -30,10 +30,11 @@ module.exports = {
                          message: "tài khoản và mật khẩu không chính xác",
                     });
                } else {
+                    const { ACCESS_TOKEN, REFRESH_TOKEN } = process.env;
                     const result = bcrypt.compare(body.password, user.password);
                     if (result) {
-                         var access_token = jwt.sign({ id: user.id }, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
-                         var refresh_token = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN, { expiresIn: '7d' });
+                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '1h' });
+                         var refresh_token = jwt.sign({ id: user.id }, REFRESH_TOKEN, { expiresIn: '7d' });
                          const data = new UserTransformer(user);
                          Object.assign(response, {
                               status: 200,
@@ -108,5 +109,21 @@ module.exports = {
           }
           return res.status(response.status).json(response);
 
+     },
+     handleLogout: async (req, res) => {
+          const { access_token } = req.user;
+          await Blacklist.findOrCreate({
+               where: {
+                    token: access_token,
+               },
+               defaults: {
+                    id: uuidv4(),
+                    token: access_token
+               },
+          });
+          res.json({
+               status: 200,
+               message: "Success",
+          });
      }
 }
