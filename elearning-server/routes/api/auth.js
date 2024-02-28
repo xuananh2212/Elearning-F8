@@ -5,4 +5,5 @@ var verifyToken = require('../../middlewares/verifyToken');
 router.post('/login', authController.handleLogin);
 router.post('/resgiter', authController.handleRegister);
 router.get('/logout', verifyToken, authController.handleLogout);
+router.post('/refresh-token', authController.handleRefreshToken);
 module.exports = router;

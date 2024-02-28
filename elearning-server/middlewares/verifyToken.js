@@ -8,7 +8,6 @@ module.exports = async (req, res, next) => {
           const token = bearer.replace("Bearer", "").trim();
           console.log(token);
           const { ACCESS_TOKEN } = process.env;
-          console.log("ACCESS_TOKEN", ACCESS_TOKEN);
           try {
                const decoded = jwt.verify(token, ACCESS_TOKEN);
                const blacklist = await Blacklist.findOne({
@@ -22,7 +21,6 @@ module.exports = async (req, res, next) => {
                const { id } = decoded;
 
                const user = await User.findByPk(id);
-               console.log(user);
                if (!user) {
                     throw new Error("User Not Found");
                }
@@ -32,7 +30,6 @@ module.exports = async (req, res, next) => {
                };
                return next();
           } catch (err) {
-               console.log(err);
                Object.assign(response, {
                     status: 401,
                     message: "Unauthorized",

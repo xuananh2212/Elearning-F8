@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const { User, Blacklist } = require('../../models/index');
 const jwt = require('jsonwebtoken');
 const UserTransformer = require('../../transformers/user.transformers');
+const { ACCESS_TOKEN, REFRESH_TOKEN } = process.env;
 module.exports = {
      handleLogin: async (req, res) => {
           const response = {};
@@ -30,10 +31,10 @@ module.exports = {
                          message: "tài khoản và mật khẩu không chính xác",
                     });
                } else {
-                    const { ACCESS_TOKEN, REFRESH_TOKEN } = process.env;
+
                     const result = bcrypt.compare(body.password, user.password);
                     if (result) {
-                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '1h' });
+                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '30s' });
                          var refresh_token = jwt.sign({ id: user.id }, REFRESH_TOKEN, { expiresIn: '7d' });
                          const data = new UserTransformer(user);
                          Object.assign(response, {
@@ -52,11 +53,10 @@ module.exports = {
                     }
                }
           } catch (e) {
-               console.log(e);
-               //  const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
+               const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
                Object.assign(response, {
                     status: 400,
-                    //      ...errors
+                    ...errors
                });
           }
           return res.status(response.status).json(response)
@@ -125,5 +125,38 @@ module.exports = {
                status: 200,
                message: "Success",
           });
+     },
+     handleRefreshToken: (req, res) => {
+          const response = {};
+          const { refreshToken } = req.body;
+          if (refreshToken) {
+               try {
+                    const result = jwt.verify(refreshToken, REFRESH_TOKEN);
+                    const { id } = result;
+                    const acessTokenNew = jwt.sign({ id }, ACCESS_TOKEN);
+                    const refreshTokenNew = jwt.sign({ id }, REFRESH_TOKEN);
+                    Object.assign(response,
+                         {
+                              status: 200,
+                              message: 'success',
+                              access_token: acessTokenNew,
+                              refresh_token: refreshTokenNew
+                         })
+
+               } catch (e) {
+                    Object.assign(response,
+                         {
+                              status: 401,
+                              message: 'Unauthorized'
+                         })
+               }
+          } else {
+               Object.assign(response,
+                    {
+                         status: 401,
+                         message: 'Unauthorized'
+                    })
+          }
+          return res.status(response.status).json(response);
      }
 }
