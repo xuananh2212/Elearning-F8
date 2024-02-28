@@ -34,7 +34,7 @@ module.exports = {
 
                     const result = bcrypt.compare(body.password, user.password);
                     if (result) {
-                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '30s' });
+                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '1h' });
                          var refresh_token = jwt.sign({ id: user.id }, REFRESH_TOKEN, { expiresIn: '7d' });
                          const data = new UserTransformer(user);
                          Object.assign(response, {
