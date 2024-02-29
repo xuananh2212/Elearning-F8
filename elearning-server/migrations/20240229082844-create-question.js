@@ -5,9 +5,8 @@ module.exports = {
     await queryInterface.createTable('Question', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.STRING
       },
       question: {
         type: Sequelize.STRING
@@ -15,11 +14,11 @@ module.exports = {
       lesson_id: {
         type: Sequelize.STRING
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

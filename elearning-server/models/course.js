@@ -10,10 +10,14 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Course.belongsTo(models.Category, { foreignKey: 'category_id' })
     }
   }
   Course.init({
+    id: {
+      type: DataTypes.STRING,
+      primaryKey: true
+    },
     title: DataTypes.STRING,
     desc: DataTypes.STRING,
     thumb: DataTypes.STRING,
