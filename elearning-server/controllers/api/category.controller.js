@@ -1,14 +1,14 @@
-const { Course } = require('../../models/index');
+const { Category } = require('../../models/index');
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
           try {
 
-               const courses = await Course.finAll();
+               const categorys = await Category.finAll();
                Object.assign(response, {
                     status: 200,
                     message: 'success',
-                    courses
+                    categorys
                })
           } catch (e) {
                Object.assign(response, {
@@ -20,7 +20,7 @@ module.exports = {
 
           return res.status(response.status).json(response);
      },
-     addCourse: async (req, res) => {
+     addcategory: async (req, res) => {
 
      }
 }
