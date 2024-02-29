@@ -5,12 +5,12 @@ const verifyToken = require("../../middlewares/verifyToken");
 const uploadController = require("../../controllers/api/upload.controller");
 router.post(
      '/image',
-     verifyToken,
+     // verifyToken,
      upload.single('image'),
      uploadController.handleUploadImage);
 router.post(
      '/video',
-     verifyToken,
+     // verifyToken,
      upload.single('file'),
      uploadController.handleUploadVideo);
 module.exports = router;

@@ -1,21 +1,27 @@
 const { v4: uuidv4 } = require('uuid');
 const { object, string, number, date, InferType } = require('yup');
 const { Category } = require('../../models/index');
+const CategoryTransformer = require('../../transformers/category.transformers');
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
           try {
 
-               const categorys = await Category.finAll();
+               const categorys = await Category.findAll();
+               const categoryTransformer = new CategoryTransformer(categorys);
+               if (!categorys.length) {
+                    throw new Error("danh mục rỗng!");
+               }
                Object.assign(response, {
                     status: 200,
                     message: 'success',
-                    categorys
+                    categorys: categoryTransformer
                })
           } catch (e) {
+               console.log(e);
                Object.assign(response, {
                     status: 400,
-                    message: 'bad request',
+                    message: e.message,
 
                })
           }
@@ -26,7 +32,18 @@ module.exports = {
           const response = {};
           try {
                let categorySchema = object({
-                    name: string().required("vui lòng nhập danh mục")
+                    name: string()
+                         .required("vui lòng nhập danh mục")
+                         .test('unique', 'tên danh mục này đã tồn tại', async (name) => {
+                              const category = await Category.findOne({
+                                   where: {
+                                        name
+                                   }
+                              })
+
+                              return !category;
+
+                         })
                });
                const body = await categorySchema.validate(req.body, {
                     abortEarly: false
@@ -57,7 +74,7 @@ module.exports = {
                const category = await Category.findByPk(id);
                console.log(category);
                if (!category) {
-                    throw new Error("bad request");
+                    throw new Error("danh mục không tồn tại!");
                }
                let categorySchema = object({
                     name: string().required("vui lòng nhập danh mục")
