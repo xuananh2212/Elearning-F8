@@ -22,6 +22,8 @@ module.exports = (sequelize, DataTypes) => {
     course_id: DataTypes.STRING
   }, {
     sequelize,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     modelName: 'Topic',
   });
   return Topic;

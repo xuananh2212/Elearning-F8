@@ -185,7 +185,6 @@ module.exports = {
                     status: 400,
                     message: e.message
                })
-
           }
           return res.status(response.status).json(response);
      }
