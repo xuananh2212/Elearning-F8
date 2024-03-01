@@ -33,5 +33,38 @@ module.exports = {
           }
           return res.status(response.status).json(response);
 
+     },
+     editTopic: async (req, res) => {
+          const { id } = req.params;
+          const response = {};
+          try {
+               const topic = await Topic.findByPk(id);
+               if (!topic) {
+                    throw new Error('id không tồn tại');
+               }
+               let topicSchema = object({
+                    title: string().required('vui lòng nhập chương học!'),
+               })
+               const body = await topicSchema.validate(req.body, { abortEarly: false });
+               await Topic.update({
+                    title: body.title
+               },
+                    {
+                         where: {
+                              id
+                         }
+                    });
+               Object.assign(response, {
+                    status: 200,
+                    message: 'update success'
+               })
+
+          } catch (e) {
+               Object.assign(response, {
+                    status: 400,
+                    message: e.message
+               })
+          }
+          return res.status(response.status).json(response);
      }
 }
