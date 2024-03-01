@@ -1,5 +1,5 @@
-const { object, string, number, date, InferType } = require('yup');
-const { Course, TypeCourse, Category } = require('../../models/index');
+const { object, string, number } = require('yup');
+const { Course, TypeCourse, Category, Topic } = require('../../models/index');
 const { v4: uuidv4 } = require('uuid');
 function validateCourse() {
      return object({
@@ -153,7 +153,6 @@ module.exports = {
 
 
           } catch (e) {
-               console.log(e);
                Object.assign(response, {
                     status: 400,
                     message: e.message
@@ -162,5 +161,32 @@ module.exports = {
           }
           return res.status(response.status).json(response);
 
+     },
+     deleteCourse: async (req, res) => {
+          const { id } = req.params;
+          const response = {};
+          try {
+               const course = await Course.findByPk(id);
+               if (!course) {
+                    throw new Error('id không tồn tại!');
+               }
+               course.setTopics([]);
+               await Course.destroy({
+                    where: {
+                         id
+                    }
+               });
+               Object.assign(response, {
+                    status: 200,
+                    message: 'delete success'
+               })
+          } catch (e) {
+               Object.assign(response, {
+                    status: 400,
+                    message: e.message
+               })
+
+          }
+          return res.status(response.status).json(response);
      }
 }
