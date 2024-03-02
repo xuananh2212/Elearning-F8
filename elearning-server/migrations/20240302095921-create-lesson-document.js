@@ -9,7 +9,7 @@ module.exports = {
         type: Sequelize.STRING
       },
       document: {
-        type: Sequelize.STRING
+        type: Sequelize.TEXT
       },
       lesson_id: {
         type: Sequelize.STRING

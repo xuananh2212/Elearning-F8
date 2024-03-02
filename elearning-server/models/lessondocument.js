@@ -19,6 +19,8 @@ module.exports = (sequelize, DataTypes) => {
     lesson_id: DataTypes.STRING
   }, {
     sequelize,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     modelName: 'LessonDocument',
   });
   return LessonDocument;
