@@ -5,9 +5,8 @@ module.exports = {
     await queryInterface.createTable('LessonDocuments', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.STRING
       },
       document: {
         type: Sequelize.STRING

@@ -45,7 +45,6 @@ module.exports = {
                               refresh_token
                          });
                     } else {
-                         console.log(2);
                          Object.assign(response, {
                               status: 400,
                               message: "tài khoản và mật khẩu không chính xác",

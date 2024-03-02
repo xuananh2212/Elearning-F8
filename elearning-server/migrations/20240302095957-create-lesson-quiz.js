@@ -2,14 +2,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('LessonVideos', {
+    await queryInterface.createTable('LessonQuizs', {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
-      },
-      url: {
         type: Sequelize.STRING
       },
       lesson_id: {
@@ -26,6 +22,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('LessonVideos');
+    await queryInterface.dropTable('LessonQuizs');
   }
 };
