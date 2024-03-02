@@ -11,16 +11,7 @@ module.exports = {
       title: {
         type: Sequelize.STRING
       },
-      url_video: {
-        type: Sequelize.STRING
-      },
-      document: {
-        type: Sequelize.STRING
-      },
       topic_id: {
-        type: Sequelize.STRING
-      },
-      type_lesson_id: {
         type: Sequelize.STRING
       },
       created_at: {

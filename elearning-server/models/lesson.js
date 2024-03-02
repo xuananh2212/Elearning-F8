@@ -11,6 +11,9 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       Lesson.belongsTo(models.Topic, { foreignKey: 'topic_id' });
+      Lesson.hasOne(models.LessonVideo, { foreignKey: 'lesson_id' });
+      Lesson.hasOne(models.LessonDocument, { foreignKey: 'lesson_id' });
+      Lesson.hasOne(models.LessonQuiz, { foreignKey: 'lesson_id' });
     }
   }
   Lesson.init({
@@ -19,10 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true
     },
     title: DataTypes.STRING,
-    url_video: DataTypes.STRING,
-    document: DataTypes.STRING,
     topic_id: DataTypes.STRING,
-    type_lesson_id: DataTypes.STRING
   }, {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
