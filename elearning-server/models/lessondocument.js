@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   LessonDocument.init({
+    id: {
+      type: DataTypes.STRING,
+      primaryKey: true,
+
+    },
     document: DataTypes.STRING,
     lesson_id: DataTypes.STRING
   }, {

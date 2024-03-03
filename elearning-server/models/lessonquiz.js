@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   LessonQuiz.init({
+    id: {
+      type: DataTypes.STRING,
+      primaryKey: true,
+
+    },
     lesson_id: DataTypes.STRING
   }, {
     sequelize,

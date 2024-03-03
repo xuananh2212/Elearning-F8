@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   LessonVideo.init({
+    id: {
+      type: DataTypes.STRING,
+      primaryKey: true,
+
+    },
     url: DataTypes.STRING,
     lesson_id: DataTypes.STRING
   }, {
