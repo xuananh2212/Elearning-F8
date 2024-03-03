@@ -1,5 +1,5 @@
 const { object, string, number } = require('yup');
-const { Course, TypeCourse, Category, Topic } = require('../../models/index');
+const { Course, TypeCourse, Category, Lesson, Topic, LessonVideo, LessonQuiz, LessonDocument, Question, Answer } = require('../../models/index');
 const { v4: uuidv4 } = require('uuid');
 function validateCourse() {
      return object({
@@ -30,6 +30,53 @@ module.exports = {
                     status: 400,
                     message: e.message,
                })
+          }
+          return res.status(response.status).json(response);
+     },
+
+     getCourseDetail: async (req, res) => {
+          const { id } = req.params;
+          const response = {};
+          try {
+               const course = await Course.findOne({
+                    where: { id },
+                    include: [{
+                         model: Topic,
+                         include: [{
+                              model: Lesson,
+                              include: [
+                                   { model: LessonVideo },
+                                   { model: LessonDocument },
+                                   {
+                                        model: LessonQuiz,
+                                        include: [{
+                                             model: Question,
+                                             include: [
+                                                  {
+                                                       model: Answer
+                                                  }
+                                             ]
+                                        }]
+                                   }
+                              ]
+                         }]
+                    }]
+               })
+               if (!course) {
+                    throw new Error('id không tồn tại');
+               }
+               Object.assign(response, {
+                    status: 200,
+                    message: 'success',
+                    course
+               })
+          } catch (e) {
+               Object.assign(response, {
+                    status: 400,
+                    message: e.message,
+
+               })
+
           }
           return res.status(response.status).json(response);
      },

@@ -94,7 +94,6 @@ module.exports = {
                          message: 'success',
                     });
           } catch (e) {
-               console.log(e);
                Object.assign(response,
                     {
                          status: 400,

@@ -55,7 +55,9 @@ module.exports = {
                const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
                Object.assign(response, {
                     status: 400,
-                    ...errors
+                    errors: {
+                         ...errors
+                    }
                });
           }
           return res.status(response.status).json(response)

@@ -25,7 +25,11 @@ module.exports = {
                Object.assign(response, {
                     status: 201,
                     message: 'create success',
-                    topic: topicTransformer
+                    topic: {
+                         ...topicTransformer,
+                         courseId: courseId
+
+                    }
                })
 
           } catch (e) {
