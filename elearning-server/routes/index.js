@@ -22,6 +22,8 @@ const lessonDocumentRouter = require('./api/lessonDocument');
 
 const lessonQuizRouter = require('./api/lessonQuiz');
 
+const questionRouter = require('./api/question');
+
 router.use("/auth/v1", authRouter);
 router.use("/user/v1", userRouter);
 router.use("/upload/v1", uploadRouter);
@@ -32,4 +34,5 @@ router.use("/lesson/v1", lessonRouter);
 router.use("/lessonVideo/v1", lessonVideoRouter);
 router.use("/lessonDocument/v1", lessonDocumentRouter);
 router.use("/lessonQuiz/v1", lessonQuizRouter);
+router.use("/question/v1", questionRouter);
 module.exports = router;

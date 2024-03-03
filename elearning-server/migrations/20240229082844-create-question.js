@@ -14,6 +14,9 @@ module.exports = {
       lesson_quiz_id: {
         type: Sequelize.STRING
       },
+      explain: {
+        type: Sequelize.STRING
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE

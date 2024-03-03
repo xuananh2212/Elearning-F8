@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { object, string, number, date, InferType } = require('yup');
 const { Category } = require('../../models/index');
-const CategoryTransformer = require('../../transformers/category.transformers');
+const CategoryTransformer = require('../../transformers/category.transformer');
 module.exports = {
      getAll: async (req, res) => {
           const response = {};

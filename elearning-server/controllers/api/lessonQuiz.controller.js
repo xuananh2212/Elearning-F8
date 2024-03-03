@@ -44,6 +44,7 @@ module.exports = {
                if (!lessonQuiz) {
                     throw new Error('id không tồn tại');
                }
+               lessonQuiz.setQuestions([]);
                await LessonQuiz.destroy({
                     where: {
                          id

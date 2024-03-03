@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      Answer.belongsTo(models.Question, { foreignKey: 'question_id' })
     }
   }
   Answer.init({
@@ -19,6 +20,8 @@ module.exports = (sequelize, DataTypes) => {
     question_id: DataTypes.STRING
   }, {
     sequelize,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     modelName: 'Answer',
   });
   return Answer;
