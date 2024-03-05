@@ -9,5 +9,4 @@ class CategoryTransformer extends Transformer {
           };
      }
 }
-
 module.exports = CategoryTransformer;
