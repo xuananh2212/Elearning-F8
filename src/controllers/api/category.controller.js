@@ -3,6 +3,7 @@ const { object, string, number, date, InferType } = require('yup');
 const { Category } = require('../../models/index');
 const CategoryTransformer = require('../../transformers/category.transformer');
 const { convertToTreeData, buildTree } = require('../../helpers/convertToTreeData');
+const { findAllChildCategories } = require('../../helpers/findAllChildCategories');
 
 module.exports = {
      getAll: async (req, res) => {
@@ -110,9 +111,10 @@ module.exports = {
                     parentId: string()
                          .test('parentCategory', 'Không thể đặt parentId là danh mục con của chính nó',
                               async (parentId) => {
-                                   const categoryChildrens = await Category.findAll({ where: { id: parentId } });
-                                   return !categoryChildrens.some(({ id }) => id === parentId)
-                              })
+                                   const parentCategories = await findAllChildCategories(id);
+                                   return !(parentCategories.some(({ id }) => id === parentId) || parentId === id)
+                              }).nullable(),
+                    status: number().required('vui lòng chọn trạng thái!')
                });
                const body = await categorySchema.validate(req.body, {
                     abortEarly: false
@@ -122,9 +124,11 @@ module.exports = {
                category.name = name;
                category.status = status;
                await category.save();
+               console.log(category);
+               const categoryTransformer = new CategoryTransformer(category);
                Object.assign(response, {
                     status: 200,
-                    category,
+                    category: categoryTransformer,
                     message: "update success",
                })
           } catch (e) {
