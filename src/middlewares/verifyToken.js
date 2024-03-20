@@ -6,7 +6,6 @@ module.exports = async (req, res, next) => {
      const response = {};
      if (bearer) {
           const token = bearer.replace("Bearer", "").trim();
-          console.log(token);
           const { ACCESS_TOKEN } = process.env;
           try {
                const decoded = jwt.verify(token, ACCESS_TOKEN);
@@ -24,9 +23,11 @@ module.exports = async (req, res, next) => {
                if (!user) {
                     throw new Error("User Not Found");
                }
+               delete user.dataValues.password;
                req.user = {
-                    ...user,
+                    ...user.dataValues,
                     access_token: token
+
                };
                return next();
           } catch (err) {

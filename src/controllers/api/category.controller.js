@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const { object, string, number, date, InferType } = require('yup');
 const { Category } = require('../../models/index');
 const CategoryTransformer = require('../../transformers/category.transformer');
+const { convertToTreeData, buildTree } = require('../../helpers/convertToTreeData');
+
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
@@ -9,16 +11,34 @@ module.exports = {
 
                const categorys = await Category.findAll();
                const categoryTransformer = new CategoryTransformer(categorys);
-               if (!categorys.length) {
-                    throw new Error("danh mục rỗng!");
-               }
                Object.assign(response, {
                     status: 200,
                     message: 'success',
-                    categorys: categoryTransformer
+                    categories: categoryTransformer
                })
           } catch (e) {
-               console.log(e);
+               Object.assign(response, {
+                    status: 400,
+                    message: e.message,
+
+               })
+          }
+
+          return res.status(response.status).json(response);
+     },
+     handleParentCategories: async (req, res) => {
+          const response = {};
+          try {
+
+               const categories = await Category.findAll({ include: 'children' });
+               const buildTreeCategories = buildTree(categories);
+               const treeData = convertToTreeData(buildTreeCategories);
+               Object.assign(response, {
+                    status: 200,
+                    message: 'success',
+                    categories: treeData
+               })
+          } catch (e) {
                Object.assign(response, {
                     status: 400,
                     message: e.message,
@@ -40,28 +60,39 @@ module.exports = {
                                         name
                                    }
                               })
-
                               return !category;
-
                          })
                });
                const body = await categorySchema.validate(req.body, {
                     abortEarly: false
                });
+               if (body.parentId) {
+                    const parentCategory = await Category.findByPk(body.parentId);
+                    if (!parentCategory) {
+                         throw new Error('parent id không tồn tại!');
+                    }
+               }
                const category = await Category.create({
                     id: uuidv4(),
-                    name: body.name
-               })
+                    name: body.name,
+                    parent_id: body.parentId,
+                    status: body.status
+               });
+               const categoryTransformer = new CategoryTransformer(category);
                Object.assign(response, {
                     status: 201,
                     message: 'success',
-                    category
+                    category: categoryTransformer
                })
           } catch (e) {
-               console.log(e);
                Object.assign(response, {
                     status: 400,
-                    message: e.message
+                    message: 'add failed',
+                    errors: {
+                         name: e?.message
+                    }
+
+
                })
           }
           return res.status(response.status).json(response);
@@ -69,32 +100,39 @@ module.exports = {
      editCategory: async (req, res) => {
           const response = {};
           const { id } = req.params;
-          console.log(id, req.body);
           try {
                const category = await Category.findByPk(id);
-               console.log(category);
                if (!category) {
-                    throw new Error("danh mục không tồn tại!");
+                    return res.status(404).json({ status: 404, message: 'category không tồn tại!' });
                }
                let categorySchema = object({
-                    name: string().required("vui lòng nhập danh mục")
+                    name: string().required("vui lòng nhập danh mục"),
+                    parentId: string()
+                         .test('parentCategory', 'Không thể đặt parentId là danh mục con của chính nó',
+                              async (parentId) => {
+                                   const categoryChildrens = await Category.findAll({ where: { id: parentId } });
+                                   return !categoryChildrens.some(({ id }) => id === parentId)
+                              })
                });
                const body = await categorySchema.validate(req.body, {
                     abortEarly: false
                });
-               await Category.update({ name: body.name }, {
-                    where: {
-                         id
-                    }
-               });
+               const { name, status, parentId } = body;
+               category.parent_id = parentId;
+               category.name = name;
+               category.status = status;
+               await category.save();
                Object.assign(response, {
                     status: 200,
+                    category,
                     message: "update success",
                })
           } catch (e) {
+               const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
                Object.assign(response, {
                     status: 400,
-                    message: e?.message
+                    message: 'update failed',
+                    errors
                })
           }
           return res.status(response.status).json(response);
@@ -103,20 +141,66 @@ module.exports = {
           const response = {};
           const { id } = req.params;
           try {
-               const category = await Category.findByPk(id);
-               console.log(category);
-               if (!category) {
-                    throw new Error("bad request");
+               const categoryDelete = await Category.findByPk(id, { include: 'children' });
+               if (!categoryDelete) {
+                    return res.status(404).json({ status: 404, message: 'category không tồn tại!' });
                }
-               await category.destroy();
+               if (categoryDelete.children && categoryDelete.children.length > 0) {
+                    const childs = await Promise.all(
+                         categoryDelete.children.map(async child => {
+                              child.parent_id = categoryDelete.parent_id;
+                              return await child.save();
+                         }));
+                    const childsTransformer = new CategoryTransformer(childs);
+                    Object.assign(response, {
+                         childs: childsTransformer
+                    })
+               }
+               await categoryDelete.destroy();
                Object.assign(response, {
                     status: 200,
+                    id,
                     message: "delete success",
                })
           } catch (e) {
                Object.assign(response, {
                     status: 400,
                     message: e?.message
+               })
+          }
+          return res.status(response.status).json(response);
+     },
+     handledeleteManyCategory: async (req, res) => {
+          const { categoryIds } = req.body;
+          const response = {};
+          const categoryChildren = [];
+          try {
+               await Promise.all(categoryIds.map(async (categoryId) => {
+                    const categoryDelete = await Category.findByPk(categoryId, { include: 'children' });
+                    if (categoryDelete) {
+                         if (categoryDelete.children && categoryDelete.children.length) {
+                              const childs = await Promise.all(categoryDelete.children.map(async (child) => {
+                                   child.parent_id = categoryDelete.parent_id;
+                                   return await child.save();
+                              }));
+                              const childsTransformer = new CategoryTransformer(childs);
+                              categoryChildren.push(...childsTransformer);
+                         }
+                         await categoryDelete.destroy();
+                    }
+               }))
+               Object.assign(response, {
+                    status: 200,
+                    message: 'delete success',
+                    categoryIds,
+                    childs: categoryChildren
+
+               })
+          } catch (e) {
+               console.log(e);
+               Object.assign(response, {
+                    status: 400,
+                    message: 'bad request'
                })
           }
           return res.status(response.status).json(response);

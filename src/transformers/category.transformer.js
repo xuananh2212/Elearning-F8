@@ -4,6 +4,8 @@ class CategoryTransformer extends Transformer {
           return {
                id: instance.id,
                name: instance.name,
+               status: instance.status,
+               parentId: instance.parent_id,
                createdAt: instance.created_at,
                updatedAt: instance.updated_at,
           };

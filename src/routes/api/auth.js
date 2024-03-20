@@ -3,6 +3,7 @@ var router = express.Router();
 var authController = require('../../controllers/api/auth.controller');
 var verifyToken = require('../../middlewares/verifyToken');
 router.post('/login', authController.handleLogin);
+router.post('/token', verifyToken, authController.handleCheckToken);
 router.post('/resgiter', authController.handleRegister);
 router.get('/logout', verifyToken, authController.handleLogout);
 router.post('/refresh-token', authController.handleRefreshToken);
