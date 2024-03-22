@@ -8,10 +8,11 @@ module.exports = {
           try {
                const users = await User.findAll();
                users.forEach(user => delete user.dataValues.password);
+               const userDataValues = users.map(user => user.dataValues);
                Object.assign(response, {
                     status: 200,
                     message: 'Success',
-                    users
+                    users: userDataValues
                })
 
           } catch (err) {
@@ -67,30 +68,21 @@ module.exports = {
                          }),
                     phone: string()
                          .matches(/^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[0-3|9]|7[0-7]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$/, 'không đúng dịnh dạng điện thoại')
-                         .nullable()
+                         .notRequired()
 
                })
                const body = await userSchema.validate(req.body, { abortEarly: false });
                const { name, email, address, phone, avatar } = body;
-               await User.update({
-                    name,
-                    email,
-                    address,
-                    phone,
-                    avatar
-               }, {
-                    where: {
-                         id
-                    }
-               });
+               userFind.name = name;;
+               userFind.email = email;
+               userFind.address = address;
+               userFind.phone = phone;
+               userFind.avatar = avatar;
+               await userFind.save();
                Object.assign(response, {
                     status: 200,
                     message: 'Update Success',
-                    user: {
-                         id,
-                         ...userFind,
-                         ...req.body
-                    }
+                    user: userFind.dataValues
                })
           } catch (e) {
                if (response?.status !== 404) {
@@ -115,9 +107,9 @@ module.exports = {
           try {
                const user = await User.findByPk(id);
                if (!user) {
-                    throw new Error('id không tồn tại!');
+                    return res.status(404).json({ status: 404, message: 'user không tồn tại!' });
                }
-               await User.destroy({ where: { id } });
+               await user.destroy();
                Object.assign(response, {
                     status: 200,
                     message: 'delete success',

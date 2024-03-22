@@ -3,6 +3,7 @@ var jwt = require('jsonwebtoken');
 const { User, Blacklist } = require("../models/index");
 module.exports = async (req, res, next) => {
      const bearer = req.get("Authorization");
+     console.log(bearer, 111111);
      const response = {};
      if (bearer) {
           const token = bearer.replace("Bearer", "").trim();
@@ -37,6 +38,7 @@ module.exports = async (req, res, next) => {
                });
           }
      } else {
+          console.log(1213);
           Object.assign(response, {
                status: 401,
                message: "Unauthorized",

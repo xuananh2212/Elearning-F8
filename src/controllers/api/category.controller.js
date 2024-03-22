@@ -4,6 +4,7 @@ const { Category } = require('../../models/index');
 const CategoryTransformer = require('../../transformers/category.transformer');
 const { convertToTreeData, buildTree } = require('../../helpers/convertToTreeData');
 const { findAllChildCategories } = require('../../helpers/findAllChildCategories');
+const { Op } = require("sequelize");
 
 module.exports = {
      getAll: async (req, res) => {
@@ -107,7 +108,25 @@ module.exports = {
                     return res.status(404).json({ status: 404, message: 'category không tồn tại!' });
                }
                let categorySchema = object({
-                    name: string().required("vui lòng nhập danh mục"),
+                    name: string()
+                         .required("vui lòng nhập danh mục")
+                         .test('unique', 'tên danh mục này đã tồn tại', async (name) => {
+                              const category = await Category.findOne({
+                                   where: {
+                                        [Op.and]: [
+                                             {
+                                                  id: {
+                                                       [Op.ne]: id,
+                                                  }
+                                             },
+                                             {
+                                                  name
+                                             }
+                                        ]
+                                   }
+                              })
+                              return !category;
+                         }),
                     parentId: string()
                          .test('parentCategory', 'Không thể đặt parentId là danh mục con của chính nó',
                               async (parentId) => {
