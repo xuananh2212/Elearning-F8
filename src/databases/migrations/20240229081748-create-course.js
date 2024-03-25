@@ -12,7 +12,7 @@ module.exports = {
         type: Sequelize.STRING
       },
       desc: {
-        type: Sequelize.STRING
+        type: Sequelize.TEXT
       },
       price: {
         type: Sequelize.INTEGER
@@ -20,11 +20,28 @@ module.exports = {
       thumb: {
         type: Sequelize.STRING
       },
+      slug: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
+      },
+      promotion_code: {
+        type: Sequelize.STRING
+      },
+      discounted_price: {
+        type: Sequelize.INTEGER
+      },
+      promotion_percentage: {
+        type: Sequelize.FLOAT
+      },
+      promotion_expiry_date: {
+        type: Sequelize.DATE
+      },
       status: {
         type: Sequelize.INTEGER
       },
       type_course_id: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       category_id: {
         type: Sequelize.STRING

@@ -21,12 +21,20 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true
     },
     title: DataTypes.STRING,
-    desc: DataTypes.STRING,
+    desc: DataTypes.TEXT,
     price: DataTypes.INTEGER,
     thumb: DataTypes.STRING,
     status: DataTypes.INTEGER,
-    type_course_id: DataTypes.STRING,
-    category_id: DataTypes.STRING
+    type_course_id: DataTypes.INTEGER,
+    category_id: DataTypes.STRING,
+    slug: {
+      type: DataTypes.STRING,
+      unique: true
+    },
+    promotion_code: DataTypes.STRING,
+    promotion_percentage: DataTypes.FLOAT,
+    promotion_expiry_date: DataTypes.DATE,
+    discounted_price: DataTypes.INTEGER,
   }, {
     sequelize,
     createdAt: 'created_at',
