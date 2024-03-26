@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       Course.belongsTo(models.Category, { foreignKey: 'category_id' });
       Course.belongsTo(models.TypeCourse, { foreignKey: 'type_course_id' });
       Course.hasMany(models.Topic, { foreignKey: 'course_id' });
+      Course.belongsTo(models.Discount, { foreignKey: 'discount_id' });
     }
   }
   Course.init({
@@ -31,9 +32,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       unique: true
     },
-    promotion_code: DataTypes.STRING,
-    promotion_percentage: DataTypes.FLOAT,
-    promotion_expiry_date: DataTypes.DATE,
+    discount_id: DataTypes.STRING,
     discounted_price: DataTypes.INTEGER,
   }, {
     sequelize,

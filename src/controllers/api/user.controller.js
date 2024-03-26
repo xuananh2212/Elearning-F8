@@ -126,7 +126,6 @@ module.exports = {
      handleDeleteManyUser: async (req, res) => {
           const response = {};
           const { userIds } = req.body;
-          console.log(userIds);
           try {
                if (!Array.isArray(userIds)) {
                     throw new Error('Định dạng dữ liệu không hợp lệ!');

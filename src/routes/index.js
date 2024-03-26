@@ -15,6 +15,7 @@ const lessonDocumentRouter = require('./api/lessonDocument');
 const lessonQuizRouter = require('./api/lessonQuiz');
 const questionRouter = require('./api/question');
 const answerRouter = require('./api/answer');
+const discountRouter = require('./api/discount');
 
 router.use("/auth/v1", authRouter);
 router.use("/user/v1", userRouter);
@@ -29,4 +30,5 @@ router.use("/lessonDocument/v1", lessonDocumentRouter);
 router.use("/lessonQuiz/v1", lessonQuizRouter);
 router.use("/question/v1", questionRouter);
 router.use("/answer/v1", answerRouter);
+router.use("/discount/v1", discountRouter);
 module.exports = router;

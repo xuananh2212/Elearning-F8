@@ -1,37 +1,8 @@
 const { object, string, number } = require('yup');
-const { Course, TypeCourse, Category, Lesson, Topic, LessonVideo, LessonQuiz, LessonDocument, Question, Answer } = require('../../models/index');
+const { Course, Discount, TypeCourse, Category, Lesson, Topic, LessonVideo, LessonQuiz, LessonDocument, Question, Answer } = require('../../models/index');
 const { v4: uuidv4 } = require('uuid');
 const CourseTransformer = require("../../transformers/course.transformer");
 const { Op } = require("sequelize");
-function validateCourse(typeCourseId) {
-     return object({
-          title: string().required("vui lòng nhập tiêu đề khoá học").test("unique", "Tên khoá học đã tồn tại!",
-               async (value) => {
-                    const course = await Course.findOne({
-                         where: {
-                              title: value
-                         }
-                    })
-                    return !course;
-
-
-               }),
-          thumb: string().required("vui lòng chọn ảnh đại diện cho khoá học"),
-          status: number().required("vui lòng chọn trạng thái"),
-          price: number().test("pro", "vui lòng nhập giá tiền", (value) => {
-               if (typeCourseId === 2) {
-                    if (!value) {
-                         return false;
-                    }
-               }
-               return true;
-          }),
-          slug: string().required("vui lòng nhập đường dẫn"),
-          typeCourseId: string().required("vui lòng cho loại khoá học"),
-          categoryId: string().required("vui lòng cho danh mục"),
-
-     })
-}
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
@@ -107,33 +78,76 @@ module.exports = {
      addCourse: async (req, res) => {
           const response = {};
           try {
-               let courseSchema = validateCourse(req.body.typeCourseId);
-               const body = await courseSchema.validate(req.body, { abortEarly: false });
-               let { title, desc, thumb, status, price, categoryId, typeCourseId } = body;
-               let category = null;
-               if (categoryId) {
-                    category = await Category.findByPk(categoryId);
-                    if (!category) {
-                         return res.status(404).json({ status: 404, message: "category not found" });
-                    }
-               }
+               const { typeCourseId, categoryId, discountId } = req.body;
                const typeCourse = await TypeCourse.findByPk(typeCourseId);
+               const category = await Category.findByPk(categoryId);
+               const discount = await Discount.findByPk(discountId);
                if (!typeCourse) {
                     return res.status(404).json({ status: 404, message: "typeCourse not found" });
                }
-               if (typeCourse.id === 1) {
-                    price = 0;
+               if (!category) {
+                    return res.status(404).json({ status: 404, message: "category not found" });
                }
+               if (!discount) {
+                    return res.status(404).json({ status: 404, message: "discount not found" });
+               }
+
+               let courseSchema = object({
+                    title: string().required("vui lòng nhập tiêu đề khoá học").test("unique", "Tên khoá học đã tồn tại!",
+                         async (value) => {
+                              const course = await Course.findOne({
+                                   where: {
+                                        title: value
+                                   }
+                              })
+                              return !course;
+
+
+                         }),
+                    slug: string()
+                         .required("vui lòng nhập đường dẫn")
+                         .test("unique-slug", "đường dẫn đã tồn tại!",
+                              async (value) => {
+                                   const course = await Course.findOne({
+                                        where: {
+                                             slug: value
+                                        }
+                                   })
+                                   return !course;
+                              }),
+                    thumb: string()
+                         .required("vui lòng chọn ảnh đại diện cho khoá học"),
+                    status: number()
+                         .required("vui lòng chọn trạng thái"),
+                    price: number()
+                         .test("pro", "vui lòng nhập giá tiền", (value) => {
+                              if (typeCourseId === 2) {
+                                   if (!value) {
+                                        return false;
+                                   }
+                              }
+                              return true;
+                         }),
+                    slug: string().required("vui lòng nhập đường dẫn"),
+                    typeCourseId: string().required("vui lòng cho loại khoá học"),
+                    categoryId: string().required("vui lòng cho danh mục"),
+
+               });
+               const body = await courseSchema.validate(req.body, { abortEarly: false });
+               let { title, desc, thumb, status, price, slug, discountedPrice } = body;
                const course = await Course.create({
                     id: uuidv4(),
                     title,
                     desc,
                     thumb,
                     status,
-                    price
+                    price,
+                    discounted_price: discountedPrice,
+                    slug
                })
                await category?.addCourse(course);
-               await typeCourse.addCourse(course);
+               await typeCourse?.addCourse(course);
+               await discount.addCourse(course);
                const courseTransformer = new CourseTransformer(course);
                Object.assign(response, {
                     status: 201,
@@ -144,7 +158,9 @@ module.exports = {
                          typeCourseId: typeCourse.id,
                          categoryId: category?.id,
                          categoryName: category?.name,
-                         typeCourseName: typeCourse?.name
+                         typeCourseName: typeCourse?.name,
+                         discountId: discount.id,
+                         discountType: discount.discount_type
                     }
                });
           } catch (e) {

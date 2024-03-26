@@ -25,17 +25,8 @@ module.exports = {
         allowNull: false,
         unique: true
       },
-      promotion_code: {
+      discount_id: {
         type: Sequelize.STRING
-      },
-      discounted_price: {
-        type: Sequelize.INTEGER
-      },
-      promotion_percentage: {
-        type: Sequelize.FLOAT
-      },
-      promotion_expiry_date: {
-        type: Sequelize.DATE
       },
       status: {
         type: Sequelize.INTEGER
@@ -45,6 +36,9 @@ module.exports = {
       },
       category_id: {
         type: Sequelize.STRING
+      },
+      discounted_price: {
+        type: Sequelize.INTEGER
       },
       created_at: {
         allowNull: false,
