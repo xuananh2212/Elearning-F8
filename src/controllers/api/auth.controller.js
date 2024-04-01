@@ -1,11 +1,9 @@
 require('dotenv').config();
-const { object, string, number, date, InferType } = require('yup');
-const { v4: uuidv4 } = require('uuid');
+const authServices = require('../../services/auth.services');
+const { object, string } = require('yup');
 const bcrypt = require('bcrypt');
-const { User, Blacklist } = require('../../models/index');
-const jwt = require('jsonwebtoken');
 const UserTransformer = require('../../transformers/user.transformers');
-const { ACCESS_TOKEN, REFRESH_TOKEN } = process.env;
+const userServices = require('../../services/user.services');
 module.exports = {
      handleLogin: async (req, res) => {
           const response = {};
@@ -19,12 +17,7 @@ module.exports = {
                          .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#$@!%&*?])[A-Za-z\d#$@!%&*?]{8,30}$/, "Mật khẩu ít nhất 8 kí tự ,có kí tự viết hoa, ký tự đặc biệt và số")
                });
                const body = await userSchema.validate(req.body, { abortEarly: false });
-               const user = await User.findOne(
-                    {
-                         where: {
-                              email: body.email
-                         }
-                    });
+               const user = await userServices.findUserByEmail(body?.email);
                if (!user) {
                     Object.assign(response, {
                          status: 400,
@@ -35,8 +28,8 @@ module.exports = {
 
                     const result = await bcrypt.compare(body.password, user.password);
                     if (result) {
-                         var access_token = jwt.sign({ id: user.id }, ACCESS_TOKEN, { expiresIn: '1h' });
-                         var refresh_token = jwt.sign({ id: user.id }, REFRESH_TOKEN, { expiresIn: '7d' });
+                         const access_token = authServices.generateAccessToken(user?.id);
+                         const refresh_token = authServices.generateRefreshToken(user?.id);
                          const data = new UserTransformer(user);
                          Object.assign(response, {
                               status: 200,
@@ -54,6 +47,7 @@ module.exports = {
                     }
                }
           } catch (e) {
+               console.log(e);
                const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
                Object.assign(response, {
                     status: 400,
@@ -77,7 +71,7 @@ module.exports = {
                          .required("vui lòng nhập email")
                          .email("email không đúng định dạng!")
                          .test('unique', 'email đã tồn tại', async (email) => {
-                              const user = await User.findOne({ where: { email } });
+                              const user = await userServices.findUserByEmail(email);
                               return !user;
 
                          }),
@@ -94,15 +88,14 @@ module.exports = {
                const body = await userSchema.validate(req.body, { abortEarly: false });
                const salt = await bcrypt.genSalt(10);
                const hashed = await bcrypt.hash(body.password, salt);
-               const user = await User.create({
-                    id: uuidv4(),
+               const user = await userServices.createUser({
                     name: body.name,
                     email: body.email,
                     password: hashed,
                     avatar: body.avatar,
                     address: body.address,
                     phone: body.phone
-               });
+               })
                delete user.dataValues.password;
                Object.assign(response, {
                     status: 201,
@@ -125,15 +118,7 @@ module.exports = {
      },
      handleLogout: async (req, res) => {
           const { access_token } = req.user;
-          await Blacklist.findOrCreate({
-               where: {
-                    token: access_token,
-               },
-               defaults: {
-                    id: uuidv4(),
-                    token: access_token
-               },
-          });
+          await authServices.findorCreateBlacklist(access_token);
           res.json({
                status: 200,
                message: "Success",
@@ -144,10 +129,10 @@ module.exports = {
           const { refreshToken } = req.body;
           if (refreshToken) {
                try {
-                    const result = jwt.verify(refreshToken, REFRESH_TOKEN);
+                    const result = authServices.verifyToken(refreshToken);
                     const { id } = result;
-                    const acessTokenNew = jwt.sign({ id }, ACCESS_TOKEN);
-                    const refreshTokenNew = jwt.sign({ id }, REFRESH_TOKEN);
+                    const acessTokenNew = authServices.generateAccessToken(id);
+                    const refreshTokenNew = authServices.generateRefreshToken(id);
                     Object.assign(response,
                          {
                               status: 200,

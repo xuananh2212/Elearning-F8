@@ -1,13 +1,11 @@
-const { Discount, Course } = require("../../models/index");
 const { object, string, date, number } = require("yup");
-const { v4: uuidv4 } = require("uuid");
-const { Op } = require('sequelize');
 const DiscountTransformer = require("../../transformers/discount.transformer");
+const discountServices = require('../../services/discount.services');
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
           try {
-               const discounts = await Discount.findAll();
+               const discounts = await discountServices.findAllDiscount();
                const discountTransformer = new DiscountTransformer(discounts);
                console.log(discounts);
                Object.assign(response, {
@@ -32,12 +30,7 @@ module.exports = {
                          discountType: string()
                               .required("vui lòng nhập kiểu khuyến mãi")
                               .test("unique", "loại khuyến mại này đã tồn tại!", async (discountType) => {
-                                   const discount = await Discount.findOne(
-                                        {
-                                             where: {
-                                                  discount_type: discountType
-                                             }
-                                        })
+                                   const discount = await discountServices.findOneByTypeDiscount(discountType);
                                    return !discount;
                               }),
                          percent: number()
@@ -56,9 +49,7 @@ module.exports = {
 
                     });
                const body = await discountSchema.validate(req.body, { abortEarly: false });
-               //expreired
-               const { discountType, percent, quantity, expired } = body;
-               const discount = await Discount.create({ id: uuidv4(), discount_type: discountType, percent, quantity, expired });
+               const discount = await discountServices.createDiscount(body);
                const discountTransformer = new DiscountTransformer(discount);
                Object.assign(response, {
                     status: 201,
@@ -82,7 +73,7 @@ module.exports = {
           const { id } = req.params;
           const response = {};
           try {
-               const discount = await Discount.findByPk(id);
+               let discount = await discountServices.findByPkDiscount(id);
                if (!discount) {
                     return res.status(404).json({
                          status: 404,
@@ -95,18 +86,7 @@ module.exports = {
                          discountType: string()
                               .required("vui lòng nhập kiểu khuyến mãi")
                               .test("unique", "loại khuyến mại này đã tồn tại!", async (discountType) => {
-                                   const discountFind = await Discount.findOne(
-                                        {
-                                             where: {
-                                                  [Op.and]: {
-                                                       discount_type: discountType,
-                                                       id: {
-                                                            [Op.ne]: id
-                                                       }
-                                                  }
-
-                                             }
-                                        })
+                                   const discountFind = await discountServices.findOneByTypeAndDifferent(id, discountType)
                                    return !discountFind;
                               }),
                          percent: number()
@@ -125,12 +105,7 @@ module.exports = {
 
                     });
                const body = await discountSchema.validate(req.body, { abortEarly: false });
-               const { discountType, percent, quantity, expired } = body;
-               discount.discount_type = discountType;
-               discount.percent = percent;
-               discount.quantity = quantity;
-               discount.expired = expired;
-               await discount.save();
+               discount = await discountServices.updateDiscount(id, body);
                const discountTransformer = new DiscountTransformer(discount);
                Object.assign(response, {
                     status: 200,
@@ -152,7 +127,7 @@ module.exports = {
           const { id } = req.params;
           const response = {};
           try {
-               const discount = await Discount.findByPk(id);
+               const discount = await discountServices.findByPkDiscount(id);
                if (!discount) {
                     return res.status(404).json({
                          status: 404,
@@ -186,11 +161,7 @@ module.exports = {
                if (discountIds.length === 0) {
                     throw new Error('danh sách id rỗng!');
                }
-               await Discount.destroy({
-                    where: {
-                         id: discountIds
-                    }
-               });
+               await discountServices.deleteManyDiscount(discountIds);
                Object.assign(response, {
                     status: 200,
                     message: 'delete success',
@@ -198,6 +169,7 @@ module.exports = {
                });
 
           } catch (e) {
+               console.log(e);
                Object.assign(response, {
                     status: 400,
                     message: e.message

@@ -1,17 +1,16 @@
-const { v4: uuidv4 } = require('uuid');
-const { object, string, number, date, InferType } = require('yup');
-const { Category } = require('../../models/index');
+const { object, string, number } = require('yup');
 const CategoryTransformer = require('../../transformers/category.transformer');
 const { convertToTreeData, buildTree } = require('../../helpers/convertToTreeData');
 const { findAllChildCategories } = require('../../helpers/findAllChildCategories');
-const { Op } = require("sequelize");
+const categoryServices = require('../../services/category.services');
+
 
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
           try {
 
-               const categorys = await Category.findAll();
+               const categorys = await categoryServices.findAllCategory();
                const categoryTransformer = new CategoryTransformer(categorys);
                Object.assign(response, {
                     status: 200,
@@ -32,7 +31,7 @@ module.exports = {
           const response = {};
           try {
 
-               const categories = await Category.findAll({ include: 'children' });
+               const categories = await categoryServices.findAllCategory('children');
                const buildTreeCategories = buildTree(categories);
                const treeData = convertToTreeData(buildTreeCategories);
                Object.assign(response, {
@@ -57,11 +56,7 @@ module.exports = {
                     name: string()
                          .required("vui lòng nhập danh mục")
                          .test('unique', 'tên danh mục này đã tồn tại', async (name) => {
-                              const category = await Category.findOne({
-                                   where: {
-                                        name
-                                   }
-                              })
+                              const category = await categoryServices.findOneByNameCategory(name);
                               return !category;
                          })
                });
@@ -69,17 +64,12 @@ module.exports = {
                     abortEarly: false
                });
                if (body.parentId) {
-                    const parentCategory = await Category.findByPk(body.parentId);
+                    const parentCategory = await categoryServices.findByPkCategory(body.parentId);
                     if (!parentCategory) {
                          throw new Error('parent id không tồn tại!');
                     }
                }
-               const category = await Category.create({
-                    id: uuidv4(),
-                    name: body.name,
-                    parent_id: body.parentId,
-                    status: body.status
-               });
+               const category = await categoryServices.createCategory(body);
                const categoryTransformer = new CategoryTransformer(category);
                Object.assign(response, {
                     status: 201,
@@ -103,7 +93,7 @@ module.exports = {
           const response = {};
           const { id } = req.params;
           try {
-               const category = await Category.findByPk(id);
+               let category = await categoryServices.findByPkCategory(id);
                if (!category) {
                     return res.status(404).json({ status: 404, message: 'category không tồn tại!' });
                }
@@ -111,20 +101,7 @@ module.exports = {
                     name: string()
                          .required("vui lòng nhập danh mục")
                          .test('unique', 'tên danh mục này đã tồn tại', async (name) => {
-                              const category = await Category.findOne({
-                                   where: {
-                                        [Op.and]: [
-                                             {
-                                                  id: {
-                                                       [Op.ne]: id,
-                                                  }
-                                             },
-                                             {
-                                                  name
-                                             }
-                                        ]
-                                   }
-                              })
+                              const category = await categoryServices.findOneByNameAndDifferentCategory(id, name);
                               return !category;
                          }),
                     parentId: string()
@@ -138,12 +115,7 @@ module.exports = {
                const body = await categorySchema.validate(req.body, {
                     abortEarly: false
                });
-               const { name, status, parentId } = body;
-               category.parent_id = parentId;
-               category.name = name;
-               category.status = status;
-               await category.save();
-               console.log(category);
+               category = await categoryServices.updateCategory(id, body);
                const categoryTransformer = new CategoryTransformer(category);
                Object.assign(response, {
                     status: 200,
@@ -151,6 +123,7 @@ module.exports = {
                     message: "update success",
                })
           } catch (e) {
+               console.log(e);
                const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
                Object.assign(response, {
                     status: 400,
@@ -164,7 +137,7 @@ module.exports = {
           const response = {};
           const { id } = req.params;
           try {
-               const categoryDelete = await Category.findByPk(id, { include: 'children' });
+               const categoryDelete = await categoryServices.findByPkCategory(id, "children");
                if (!categoryDelete) {
                     return res.status(404).json({ status: 404, message: 'category không tồn tại!' });
                }
@@ -199,7 +172,7 @@ module.exports = {
           const categoryChildren = [];
           try {
                await Promise.all(categoryIds.map(async (categoryId) => {
-                    const categoryDelete = await Category.findByPk(categoryId, { include: 'children' });
+                    const categoryDelete = await categoryServices.findByPkCategory(categoryId, 'children');
                     if (categoryDelete) {
                          if (categoryDelete.children && categoryDelete.children.length) {
                               const childs = await Promise.all(categoryDelete.children.map(async (child) => {

@@ -1,20 +1,17 @@
-const { response } = require('express');
-const { User } = require('../../models/index');
-const { Op } = require("sequelize");
 const { object, string } = require('yup');
+const userSevices = require('../../services/user.services')
 module.exports = {
      handleAlluser: async (req, res) => {
           const response = {};
           try {
-               const users = await User.findAll();
+               const users = await userSevices.findAllUser();
                users.forEach(user => delete user.dataValues.password);
                const userDataValues = users.map(user => user.dataValues);
                Object.assign(response, {
                     status: 200,
                     message: 'Success',
                     users: userDataValues
-               })
-
+               });
           } catch (err) {
                Object.assign(response, {
                     status: 400,
@@ -36,7 +33,7 @@ module.exports = {
           const response = {};
           try {
                const { id } = req.params;
-               const userFind = await User.findByPk(id);
+               let userFind = await userSevices.findUserById(id);
                if (!userFind) {
                     Object.assign(response, {
                          status: 404
@@ -50,20 +47,7 @@ module.exports = {
                          .required('vui lòng nhập email')
                          .email('email không đúng định dạng')
                          .test('unique', "email đã tồn tại!", async (email) => {
-                              const checkEmail = await User.findOne({
-                                   where: {
-                                        [Op.and]: [
-                                             {
-                                                  id: {
-                                                       [Op.ne]: id
-                                                  }
-                                             },
-                                             {
-                                                  email
-                                             }
-                                        ]
-                                   }
-                              })
+                              const checkEmail = await userSevices.findOneUserByEmailAndDifferentId(id, email);
                               return !checkEmail
                          }),
                     phone: string()
@@ -72,17 +56,11 @@ module.exports = {
 
                })
                const body = await userSchema.validate(req.body, { abortEarly: false });
-               const { name, email, address, phone, avatar } = body;
-               userFind.name = name;;
-               userFind.email = email;
-               userFind.address = address;
-               userFind.phone = phone;
-               userFind.avatar = avatar;
-               await userFind.save();
+               userFind = await userSevices.updateUser(id, body);
                Object.assign(response, {
                     status: 200,
                     message: 'Update Success',
-                    user: userFind.dataValues
+                    user: userFind
                })
           } catch (e) {
                if (response?.status !== 404) {
@@ -105,7 +83,7 @@ module.exports = {
           const response = {};
           const { id } = req.params;
           try {
-               const user = await User.findByPk(id);
+               const user = await userSevices.findUserById(id);
                if (!user) {
                     return res.status(404).json({ status: 404, message: 'user không tồn tại!' });
                }
@@ -133,11 +111,8 @@ module.exports = {
                if (userIds.length === 0) {
                     throw new Error('danh sách id rỗng!');
                }
-               await User.destroy({
-                    where: {
-                         id: userIds
-                    }
-               });
+               await userSevices.deleteManyUser(userIds);
+
                Object.assign(response, {
                     status: 200,
                     message: 'delete success',

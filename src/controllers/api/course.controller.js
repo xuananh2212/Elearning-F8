@@ -1,17 +1,14 @@
 const { object, string, number } = require('yup');
-const { Course, Discount, TypeCourse, Category, Lesson, Topic, LessonVideo, LessonQuiz, LessonDocument, Question, Answer } = require('../../models/index');
-const { v4: uuidv4 } = require('uuid');
 const CourseTransformer = require("../../transformers/course.transformer");
-const { Op } = require("sequelize");
+const courseServices = require('../../services/course.services');
+const typeCourseServices = require('../../services/typeCourse.services');
+const categoryServices = require('../../services/category.services');
+const discountServices = require('../../services/discount.services');
 module.exports = {
      getAll: async (req, res) => {
           const response = {};
           try {
-               const courses = await Course.findAll({
-                    include: [{
-                         model: TypeCourse
-                    }, { model: Category }]
-               });
+               const courses = await courseServices.findAllCourse();
                const coursesTranformer = new CourseTransformer(courses);
                Object.assign(response, {
                     status: 200,
@@ -29,33 +26,10 @@ module.exports = {
      },
 
      getCourseDetail: async (req, res) => {
-          const { id } = req.params;
+          const { slug } = req.params;
           const response = {};
           try {
-               const course = await Course.findOne({
-                    where: { id },
-                    include: [{
-                         model: Topic,
-                         include: [{
-                              model: Lesson,
-                              include: [
-                                   { model: LessonVideo },
-                                   { model: LessonDocument },
-                                   {
-                                        model: LessonQuiz,
-                                        include: [{
-                                             model: Question,
-                                             include: [
-                                                  {
-                                                       model: Answer
-                                                  }
-                                             ]
-                                        }]
-                                   }
-                              ]
-                         }]
-                    }]
-               })
+               const course = await courseServices.findOneBySlugCourseDetail(slug);
                if (!course) {
                     throw new Error('id không tồn tại');
                }
@@ -75,44 +49,23 @@ module.exports = {
           return res.status(response.status).json(response);
      },
 
-     addCourse: async (req, res) => {
+     handleAddCourse: async (req, res) => {
           const response = {};
+          const { typeCourseId } = req.body;
           try {
-               const { typeCourseId, categoryId, discountId } = req.body;
-               const typeCourse = await TypeCourse.findByPk(typeCourseId);
-               const category = await Category.findByPk(categoryId);
-               const discount = await Discount.findByPk(discountId);
-               if (!typeCourse) {
-                    return res.status(404).json({ status: 404, message: "typeCourse not found" });
-               }
-               if (!category) {
-                    return res.status(404).json({ status: 404, message: "category not found" });
-               }
-               if (!discount) {
-                    return res.status(404).json({ status: 404, message: "discount not found" });
-               }
-
                let courseSchema = object({
                     title: string().required("vui lòng nhập tiêu đề khoá học").test("unique", "Tên khoá học đã tồn tại!",
                          async (value) => {
-                              const course = await Course.findOne({
-                                   where: {
-                                        title: value
-                                   }
-                              })
+                              const course = await courseServices.findOneByTitle(value);
                               return !course;
 
 
                          }),
                     slug: string()
                          .required("vui lòng nhập đường dẫn")
-                         .test("unique-slug", "đường dẫn đã tồn tại!",
+                         .test("unique", "đường dẫn đã tồn tại!",
                               async (value) => {
-                                   const course = await Course.findOne({
-                                        where: {
-                                             slug: value
-                                        }
-                                   })
+                                   const course = await courseServices.findOneBySlug(value)
                                    return !course;
                               }),
                     thumb: string()
@@ -120,34 +73,41 @@ module.exports = {
                     status: number()
                          .required("vui lòng chọn trạng thái"),
                     price: number()
-                         .test("pro", "vui lòng nhập giá tiền", (value) => {
-                              if (typeCourseId === 2) {
+                         .test("pro", "vui lòng nhập giá tiền", async (value) => {
+                              const typeCourse = await typeCourseServices.findByPkTypeCourse(typeCourseId);
+                              console.log(typeCourse);
+                              if (typeCourse?.name !== "miễn phí") {
                                    if (!value) {
                                         return false;
                                    }
                               }
                               return true;
                          }),
-                    slug: string().required("vui lòng nhập đường dẫn"),
-                    typeCourseId: string().required("vui lòng cho loại khoá học"),
+                    typeCourseId: number().required("vui lòng cho loại khoá học"),
                     categoryId: string().required("vui lòng cho danh mục"),
 
                });
                const body = await courseSchema.validate(req.body, { abortEarly: false });
-               let { title, desc, thumb, status, price, slug, discountedPrice } = body;
-               const course = await Course.create({
-                    id: uuidv4(),
-                    title,
-                    desc,
-                    thumb,
-                    status,
-                    price,
-                    discounted_price: discountedPrice,
-                    slug
-               })
+               let { discountId, categoryId } = body;
+               const typeCourse = await typeCourseServices.findByPkTypeCourse(typeCourseId);
+               const category = await categoryServices.findByPkCategory(categoryId);
+               let discount = null;
+               if (discountId) {
+                    discount = await discountServices.findByPkDiscount(discountId);
+                    if (!discount) {
+                         return res.status(404).json({ status: 404, message: "discount not found" });
+                    }
+               }
+               if (!typeCourse) {
+                    return res.status(404).json({ status: 404, message: "typeCourse not found" });
+               }
+               if (!category) {
+                    return res.status(404).json({ status: 404, message: "category not found" });
+               }
+               const course = await courseServices.createCourse(body);
                await category?.addCourse(course);
                await typeCourse?.addCourse(course);
-               await discount.addCourse(course);
+               await discount?.addCourse(course);
                const courseTransformer = new CourseTransformer(course);
                Object.assign(response, {
                     status: 201,
@@ -159,8 +119,8 @@ module.exports = {
                          categoryId: category?.id,
                          categoryName: category?.name,
                          typeCourseName: typeCourse?.name,
-                         discountId: discount.id,
-                         discountType: discount.discount_type
+                         discountId: discount?.id,
+                         discountType: discount?.discount_type
                     }
                });
           } catch (e) {
@@ -176,108 +136,95 @@ module.exports = {
           }
           return res.status(response.status).json(response);
      },
-     editCourse: async (req, res) => {
+     handleEditCourse: async (req, res) => {
           const { id } = req.params;
           const response = {};
+          const { typeCourseId } = req.body;
           try {
-               const course = await Course.findByPk(id, { include: [{ model: TypeCourse }, { model: Category }] });
+               let course = await courseServices.findByPkCourse(id);
                if (!course) {
                     return res.status(404).json({ status: 404, message: 'course Not Found' });
                }
                let courseSchema = object({
-                    title: string().required("vui lòng nhập tiêu đề khoá học").test("unique", "Tên khoá học đã tồn tại!",
-                         async (value) => {
-                              const course = await Course.findOne(
-                                   {
-                                        where: {
-                                             [Op.and]: [
-                                                  {
-                                                       id: {
-                                                            [Op.ne]: id
-                                                       }
-                                                  },
-                                                  {
-                                                       title: value
-                                                  }
-                                             ]
-                                        }
+                    title: string()
+                         .required("vui lòng nhập tiêu đề khoá học")
+                         .test("unique", "Tên khoá học đã tồn tại!",
+                              async (title) => {
+                                   const course = await courseServices.findOneByTitleAnDifferentId(id, title);
+                                   return !course;
 
+
+                              })
+                    ,
+                    thumb: string()
+                         .required("vui lòng chọn ảnh đại diện cho khoá học"),
+                    status: number()
+                         .required("vui lòng chọn trạng thái"),
+                    price: number()
+                         .notRequired()
+                         .test("pro", "vui lòng nhập giá tiền", async (value) => {
+                              const { name } = await typeCourseServices.findByPkTypeCourse(typeCourseId);
+                              if (name !== "miễn phí") {
+                                   if (!value) {
+                                        return false;
                                    }
-                              )
-                              return !course;
-
-
-                         }),
-                    thumb: string().required("vui lòng chọn ảnh đại diện cho khoá học"),
-                    status: number().required("vui lòng chọn trạng thái"),
-                    price: number().test("pro", "vui lòng nhập giá tiền", (value) => {
-                         if (req.body?.typeCourseId === 2) {
-                              if (!value) {
-                                   return false;
                               }
-                         }
-                         return true;
-                    }),
-                    typeCourseId: string().required("vui lòng cho loại khoá học")
+                              return true;
+                         }),
+                    slug: string()
+                         .required("vui lòng nhập đường dẫn")
+                         .test("unique-slug", "đường dẫn đã tồn tại!",
+                              async (value) => {
+                                   const course = await courseServices.findOneBySlugAndDifferentId(id, value);
+                                   return !course;
+                              })
+                    ,
+                    typeCourseId: number().required("vui lòng cho loại khoá học"),
+                    categoryId: string().required("vui lòng chọn danh mục")
                });
                const body = await courseSchema.validate(req.body, { abortEarly: false });
-               const { title, desc, thumb, status, price, categoryId, typeCourseId } = body;
-               let category = null;
-               if (categoryId) {
-                    category = await Category.findByPk(categoryId);
-                    if (!category) {
-                         return res.status(404).json({ status: 404, message: "category not found" });
-                    }
+               let { categoryId, discountId } = body;
+               const category = await categoryServices.findByPkCategory(categoryId);
+               if (!category) {
+                    return res.status(404).json({ status: 404, message: "category not found" });
                }
-               const typeCourse = await TypeCourse.findByPk(typeCourseId);
+               const typeCourse = await typeCourseServices.findByPkTypeCourse(typeCourseId);
                if (!typeCourse) {
                     return res.status(404).json({ status: 404, message: "typeCourse not found" });
                }
-               course.title = title;
-               course.desc = desc;
-               course.thumb = thumb;
-               course.status = status;
-               if (typeCourse.id === 1) {
-                    course.price = 0;
+               const categoryOld = await categoryServices.findByPkCategory(course?.category_id);
+               const typeCourseOld = await typeCourseServices.findByPkTypeCourse(course?.type_course_id);
+               const discountOld = await discountServices.findByPkDiscount(course?.discount_id);
+               if (typeCourse.name === "miễn phí") {
+                    price = 0;
+                    await discountOld?.removeCourse(course);
                } else {
-                    course.price = price;
-               }
-               await course.save();
-               const categoryOld = await Category.findByPk(course?.category_id);
-               const typeCourseOld = await TypeCourse.findByPk(course?.type_course_id);
-               const courseTransformer = new CourseTransformer(course);
-               let typeCourseName = courseTransformer.typeCourseName;
-               let categoryName = courseTransformer.categoryName;
-               if (categoryOld || typeCourseOld) {
-                    if (categoryOld && (+categoryOld?.id !== +categoryId)) {
-                         await categoryOld?.removeCourse(course);
-                         await category?.addCourse(course);
-                         course.category_id = category?.id;
-                         categoryName = category?.name;
-                    }
-                    if (typeCourseOld && (+typeCourseOld?.id !== +typeCourseId)) {
-                         await typeCourseOld?.removeCourse(course);
-                         await typeCourse?.addCourse(course);
-                         course.type_course_id = typeCourse?.id;
-                         typeCourseName = typeCourse?.name;
-                    }
-                    await course.save();
-                    const courseTransformer = new CourseTransformer(course);
-                    Object.assign(response, {
-                         status: 200,
-                         message: 'success',
-                         course: {
-                              ...courseTransformer, typeCourseName, categoryName
+                    const discount = await discountServices.findByPkDiscount(discountId);
+                    console.log(discount, discountOld, 2333333)
+                    if (discountOld || discountId) {
+                         if (discountOld?.id !== discountId) {
+                              await discountOld?.removeCourse(course);
+                              await discount?.addCourse(course);
                          }
-                    });
-               } else {
-
-                    Object.assign(response, {
-                         status: 200,
-                         message: 'success',
-                         course: courseTransformer
-                    });
+                    }
                }
+               course = await courseServices.updateCourse(id, body);
+               if (categoryOld?.id !== categoryId) {
+                    await categoryOld?.removeCourse(course);
+                    await category?.addCourse(course);
+               }
+               if (typeCourseOld?.id !== typeCourseId) {
+                    await typeCourseOld?.removeCourse(course);
+                    await typeCourse?.addCourse(course);
+               }
+
+               const courseNew = await courseServices.findByPkCourse(id);
+               const courseTransformer = new CourseTransformer(courseNew);
+               Object.assign(response, {
+                    status: 200,
+                    message: 'success',
+                    course: courseTransformer
+               });
           } catch (e) {
                console.log(e);
                const errors = Object.fromEntries(e?.inner?.map((item) => [item.path, item.message]));
@@ -291,20 +238,16 @@ module.exports = {
           return res.status(response.status).json(response);
 
      },
-     deleteCourse: async (req, res) => {
+     handleDeleteCourse: async (req, res) => {
           const { id } = req.params;
           const response = {};
           try {
-               const course = await Course.findByPk(id);
+               const course = await courseServices.findByPkCourse(id);
                if (!course) {
                     throw new Error('id không tồn tại!');
                }
                course.setTopics([]);
-               await Course.destroy({
-                    where: {
-                         id
-                    }
-               });
+               await course.destroy();
                Object.assign(response, {
                     status: 200,
                     courseId: id,
@@ -315,6 +258,34 @@ module.exports = {
                     status: 400,
                     message: e.message
                })
+          }
+          return res.status(response.status).json(response);
+     }
+     ,
+     handleDeleteManyCourse: async (req, res) => {
+          const response = {};
+          const { courseIds } = req.body;
+          try {
+               if (!Array.isArray(courseIds)) {
+                    return res.status(400).json({ status: 400, message: 'Định dạng dữ liệu không hợp lệ!' })
+               }
+               if (courseIds.length === 0) {
+                    throw new Error('danh sách id rỗng!');
+               }
+               await courseServices.deleteManyCourse(courseIds);
+
+               Object.assign(response, {
+                    status: 200,
+                    message: 'delete success',
+                    courseIds
+               });
+
+          } catch (e) {
+               console.log(e);
+               Object.assign(response, {
+                    status: 400,
+                    message: e.message
+               });
           }
           return res.status(response.status).json(response);
      }
