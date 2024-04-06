@@ -31,7 +31,7 @@ module.exports = {
           try {
                const course = await courseServices.findOneBySlugCourseDetail(slug);
                if (!course) {
-                    throw new Error('id không tồn tại');
+                    throw new Error('slug không tồn tại');
                }
                Object.assign(response, {
                     status: 200,
@@ -196,7 +196,7 @@ module.exports = {
                const typeCourseOld = await typeCourseServices.findByPkTypeCourse(course?.type_course_id);
                const discountOld = await discountServices.findByPkDiscount(course?.discount_id);
                if (typeCourse.name === "miễn phí") {
-                    price = 0;
+                    body.price = 0;
                     await discountOld?.removeCourse(course);
                } else {
                     const discount = await discountServices.findByPkDiscount(discountId);

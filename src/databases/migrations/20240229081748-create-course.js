@@ -14,6 +14,9 @@ module.exports = {
       desc: {
         type: Sequelize.TEXT
       },
+      amount_learn: {
+        type: Sequelize.INTEGER
+      },
       price: {
         type: Sequelize.INTEGER
       },

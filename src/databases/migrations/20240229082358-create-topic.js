@@ -11,6 +11,9 @@ module.exports = {
       title: {
         type: Sequelize.STRING
       },
+      sort: {
+        type: Sequelize.INTEGER
+      },
       course_id: {
         type: Sequelize.STRING
       },

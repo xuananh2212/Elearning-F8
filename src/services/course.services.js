@@ -86,8 +86,16 @@ module.exports = {
                where: { slug },
                include: [{
                     model: Topic,
+                    separate: true,
+                    order: [
+                         ['sort', 'ASC']
+                    ],
                     include: [{
                          model: Lesson,
+                         separate: true,
+                         order: [
+                              ['sort', 'ASC']
+                         ],
                          include: [
                               { model: LessonVideo },
                               { model: LessonDocument },
@@ -105,6 +113,7 @@ module.exports = {
                          ]
                     }]
                }]
+
           })
      },
      createCourse: async (data) => {

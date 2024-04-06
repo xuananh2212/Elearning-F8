@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Blacklist } = require("../models/index");
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 const { ACCESS_TOKEN, REFRESH_TOKEN } = process.env;
 module.exports = {
      verifyToken: (token) => {

@@ -21,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       primaryKey: true
     },
+    sort: DataTypes.INTEGER,
     title: DataTypes.STRING,
     topic_id: DataTypes.STRING,
   }, {
