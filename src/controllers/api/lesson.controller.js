@@ -3,8 +3,8 @@ const { object, number, string } = require('yup');
 const { v4: uuidv4 } = require('uuid');
 const { Lesson, Topic } = require('../../models/index');
 const LessonTransformer = require('../../transformers/lesson.transformer');
-const lessonServices = require('../../services/Lesson.services');
-const topicServices = require('../../services/Topic.services');
+const lessonServices = require('../../services/lesson.services');
+const topicServices = require('../../services/topic.services');
 
 
 module.exports = {
